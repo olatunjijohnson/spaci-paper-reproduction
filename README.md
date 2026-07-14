@@ -24,18 +24,18 @@ reduced via the environment variable noted in its header.
 | Script | Reproduces | Approx. runtime* |
 |---|---|---|
 | `R/01_accuracy_table.R` | Table 3 (accuracy across confounding strength) | hours (NSIM=1000); set `NSIM=100` for a check |
-| `R/02_bias_bound_validation.R` + `02b` | Fig. 5 and the §7.2 validation numbers for Prop. 2 (bound >= bias in 100% of reps; caliper sweep) | ~1 h |
-| `R/03_partial_dr_validation.R` + `03b` | Fig. 6 and the §7.3 validation for Prop. 3 (bias tracks b_UA, cor 0.94) | ~30 min |
-| `R/04_gamma_probe.R` + `04b` | Fig. 4 (recovery orthogonality probe) | ~30 min |
-| `R/05_coverage_weights.R` + `05b` | Table 2 + Fig. 3 (SE calibration/coverage) and Table 1 + Fig. 2 (weight adaptivity) | ~1 h |
+| `R/02_bias_bound_validation.R` + `02b` | Fig. 2 and the §6.2 validation numbers for Prop. 2 (bound >= bias in 100% of reps; caliper sweep) | ~1 h |
+| `R/03_partial_dr_validation.R` + `03b` | Fig. 3 and the §6.3 validation for Prop. 3 (bias tracks b_UA, cor 0.94) | ~30 min |
+| `R/04_gamma_probe.R` + `04b` | Fig. 9 (recovery orthogonality probe, Discussion) | ~30 min |
+| `R/05_coverage_weights.R` + `05b` | Table 2 + Fig. 5 (§6.5 SE calibration/coverage) and Table 1 + Fig. 4 (§6.4 weight adaptivity) | ~1 h |
 | `R/06_misspecification.R` | Tables 4-5 (double-robustness stress test; exposure-mapping misspecification) | ~30 min |
-| `R/07_application_ozone.R` | Table 6, Fig. 7 (forest), bias-bound diagnostic, tau/caliper/seed sensitivity | ~5 min |
-| `R/08_matchmap_psoverlap.R` | Fig. 8 (matched-pairs map) and Fig. 9 (PS overlap) | ~2 min |
+| `R/07_application_ozone.R` | Table 6, Fig. 6 (forest), bias-bound diagnostic, tau/caliper/seed sensitivity | ~5 min |
+| `R/08_matchmap_psoverlap.R` | Fig. 7 (matched-pairs map) and Fig. 8 (PS overlap) | ~2 min |
 
 *on ~10 cores; scripts use `parallel::mclapply`. Figure numbers refer to the
-current draft; Sections 7.2 and 7.3 hold the full description of the
-bias-bound and partial-DR validation designs (the simulator, replicate
-counts, and what each panel of Figs. 5-6 shows).
+current draft; Sections 6.2-6.5 of the paper hold the full description of
+each validation design (the simulator, grids, replicate counts, and what
+each figure panel shows).
 
 ## Notes
 
