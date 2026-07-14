@@ -51,9 +51,9 @@ us <- map_data("state")
 
 p8 <- ggplot() +
   geom_polygon(data = us, aes(long, lat, group = group),
-               fill = "grey97", colour = "grey80", linewidth = 0.25) +
+               fill = "grey97", colour = "grey88", linewidth = 0.2) +
   geom_segment(data = seg_df, aes(x, y, xend = xend, yend = yend),
-               colour = "grey55", linewidth = 0.22, alpha = 0.4) +
+               colour = "grey25", linewidth = 0.25, alpha = 0.55) +
   geom_point(data = pt_df, aes(x, y, colour = Treatment), size = 1.6, alpha = 0.85) +
   facet_wrap(~Method, ncol = 1, labeller = as_labeller(lbls)) +
   coord_fixed(ratio = 1.3, xlim = range(S[, 1]) + c(-2, 2), ylim = range(S[, 2]) + c(-2, 2)) +
