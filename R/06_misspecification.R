@@ -11,9 +11,14 @@
 ## Standalone (does not touch the reverted package). n=250, R=150.
 ## =====================================================================
 suppressMessages(library(spaci))
+source("R/00_parallel.R")
+## spaci internals used below (not exported by the package)
+matern_cov_matrix <- spaci:::matern_cov_matrix
+safe_scale <- spaci:::safe_scale
+clip_ps <- spaci:::clip_ps
 OUT <- "results"
 dir.create(OUT, showWarnings = FALSE)
-library(parallel); RNGkind("L'Ecuyer-CMRG")
+RNGkind("L'Ecuyer-CMRG")
 
 fit_matern_exp <- function(resid, coords) {
   d <- as.matrix(stats::dist(coords)); r <- as.numeric(resid); n <- length(r)
@@ -67,12 +72,12 @@ rup <- function(dd, ps_aug = FALSE, m0_aug = FALSE) {
   Sig <- matern_cov_matrix(dm, ph$sigma2, ph$theta, 0.5)
   V <- Sig + max(ph$sigma2_eps, 1e-8)*diag(n) + 1e-6*diag(n)
   W <- model.matrix(init); tg <- solve(t(W) %*% solve(V, W), t(W) %*% solve(V, Y))
-  dat$Uhat <- spaci:::safe_scale(as.vector(Sig %*% solve(V, as.numeric(Y - W %*% tg))))
+  dat$Uhat <- safe_scale(as.vector(Sig %*% solve(V, as.numeric(Y - W %*% tg))))
   ps_rhs <- paste("X1 + X2", if (ps_aug) "+ I(X1^2)" else "", "+ G + Uhat")
   m0_rhs <- paste("X1 + X2", if (m0_aug) "+ I(X1^2)" else "", "+ G + Uhat")
   ps <- suppressWarnings(glm(as.formula(paste("Z ~", ps_rhs)), family = binomial(),
         data = dat, control = glm.control(maxit = 100)))
-  ehat <- spaci:::clip_ps(fitted(ps))
+  ehat <- clip_ps(fitted(ps))
   m0 <- lm(as.formula(paste("Y ~", m0_rhs)), data = dat[dat$Z == 0, , drop = FALSE])
   m0hat <- as.numeric(predict(m0, newdata = dat))
   w <- ehat / (1 - ehat)
@@ -87,10 +92,10 @@ if (MODE %in% c("all", "dr")) {
                 CM = c(TRUE, FALSE), MM = c(FALSE, FALSE))
   res <- lapply(names(cells), function(nm) {
     a <- cells[[nm]]
-    v <- unlist(mclapply(1:R, function(r) tryCatch({
+    v <- unlist(par_lapply(1:R, function(r) tryCatch({
       dd <- gen(n, seed = 70000 + r, u = 0, nl = TRUE)   # u = 0: clean DR test
       rup(dd, ps_aug = a[1], m0_aug = a[2])
-    }, error = function(e) NA_real_), mc.cores = 11))
+    }, error = function(e) NA_real_)))
     v <- v[is.finite(v)]
     data.frame(cell = nm, ps_correct = a[1], m0_correct = a[2],
                reps = length(v), bias = mean(v) - 2, sd = sd(v))
@@ -101,13 +106,13 @@ if (MODE %in% c("all", "dr")) {
 
 if (MODE %in% c("all", "expo")) {
   res <- lapply(c("exp01", "exp005", "knn5"), function(ex) {
-    M <- do.call(rbind, mclapply(1:R, function(r) tryCatch({
+    M <- do.call(rbind, par_lapply(1:R, function(r) tryCatch({
       dd <- gen(n, seed = 80000 + r, u = 0, expo = ex)
       ru <- rup(dd, ps_aug = FALSE, m0_aug = FALSE)   # linear truth here (nl=FALSE)
       fi <- idaps(dd$Y, dd$A, cbind(X1 = dd$X1, X2 = dd$X2), dd$S,
                   tau = 0.1, caliper = 0.25, seed = r)$att
       c(ru = ru, id = fi)
-    }, error = function(e) c(ru = NA_real_, id = NA_real_)), mc.cores = 11))
+    }, error = function(e) c(ru = NA_real_, id = NA_real_))))
     data.frame(dgp_exposure = ex,
                rup_bias = mean(M[,"ru"], na.rm = TRUE) - 2, rup_sd = sd(M[,"ru"], na.rm = TRUE),
                idaps_bias = mean(M[,"id"], na.rm = TRUE) - 2, idaps_sd = sd(M[,"id"], na.rm = TRUE))

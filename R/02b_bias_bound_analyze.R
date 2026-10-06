@@ -1,6 +1,6 @@
 ## Analyze the T2 bias-bound validation: identity, bound validity, C_overlap,
 ## plug-in agreement, and the caliper-sweep consistency corollary.
-OUT <- "results"
+OUT <- file.path("results", "02_bias_bound")
 
 ## ---------- GRID ----------
 grid <- readRDS(file.path(OUT, "grid.rds"))

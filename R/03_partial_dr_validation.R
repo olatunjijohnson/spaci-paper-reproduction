@@ -11,8 +11,13 @@
 ##   (U_A -> 0, classic DR recovered); (c) bias ∝ theta_U; oracle-full-U ~ 0.
 ## =====================================================================
 suppressMessages(library(spaci))
-OUT <- "results"
-dir.create(OUT, showWarnings = FALSE)
+source("R/00_parallel.R")
+## spaci internals used below (not exported by the package)
+matern_cov_matrix <- spaci:::matern_cov_matrix
+safe_scale <- spaci:::safe_scale
+clip_ps <- spaci:::clip_ps
+OUT <- file.path("results", "03_partial_dr")
+dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 fit_matern_exp <- function(resid, coords) {
   d <- as.matrix(stats::dist(coords)); r <- as.numeric(resid); n <- length(r)
@@ -82,7 +87,7 @@ one_rep <- function(n, seed, theta_spatial, delta_u, gamma=1.5, tau=0.1) {
 }
 
 args <- commandArgs(trailingOnly=TRUE); MODE <- if (length(args)>=1) args[1] else "run"
-library(parallel); RNGkind("L'Ecuyer-CMRG")
+RNGkind("L'Ecuyer-CMRG")
 
 if (MODE == "test") {
   for (du in c(0, 1, 2)) for (th in c(1, 2)) {
@@ -97,9 +102,8 @@ if (MODE == "run") {
   R <- 200; n <- 250
   res <- lapply(seq_len(nrow(cells)), function(k) {
     th<-cells$theta_spatial[k]; du<-cells$delta_u[k]
-    M <- do.call(rbind, mclapply(1:R, function(r)
-      tryCatch(one_rep(n, seed=13000*k+r, theta_spatial=th, delta_u=du), error=function(e) NULL),
-      mc.cores=11))
+    M <- do.call(rbind, par_lapply(1:R, function(r)
+      tryCatch(one_rep(n, seed=13000*k+r, theta_spatial=th, delta_u=du), error=function(e) NULL)))
     list(theta_spatial=th, delta_u=du, M=M)
   })
   saveRDS(res, file.path(OUT,"grid.rds")); cat("T3_DONE\n")

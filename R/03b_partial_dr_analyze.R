@@ -1,5 +1,5 @@
 ## Analyze T3 partial-double-robustness validation.
-OUT <- "results"
+OUT <- file.path("results", "03_partial_dr")
 grid <- readRDS(file.path(OUT, "grid.rds"))
 
 pool <- do.call(rbind, lapply(grid, function(c) {

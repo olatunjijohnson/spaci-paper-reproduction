@@ -9,13 +9,18 @@ only the experiment and analysis code.
 
 ```r
 install.packages("remotes")
-remotes::install_github("Ogunsolaia/spaci")   # methods + bundled ozone data
+remotes::install_github("Ogunsolaia/spaci@119e0fe")  # methods + bundled ozone data
 install.packages(c("readxl", "geoR", "ggplot2", "maps"))  # geoR: application's
                                                 # Matern engine; ggplot2/maps:
                                                 # Figures 8-9 only
 ```
 
-R >= 4.1. Scripts write intermediate results to `results/` and figures to
+The install line pins `spaci` to the commit of version 0.2.0 that the scripts
+were checked against, so later package changes cannot alter the results.
+
+R >= 4.1. Run every script from the repository root, e.g.
+`Rscript R/02_bias_bound_validation.R grid`. Scripts write intermediate results
+to `results/` (scripts 02-04 each use their own subfolder) and figures to
 `figures/`. Where a script is Monte-Carlo heavy, the replicate count can be
 reduced via the environment variable noted in its header.
 
@@ -32,11 +37,24 @@ reduced via the environment variable noted in its header.
 | `R/07_application_ozone.R` | Table 6, Fig. 4 (forest), bias-bound diagnostic, tau/caliper/seed sensitivity | ~5 min |
 | `R/08_matchmap_psoverlap.R` | Fig. 5 (matched-pairs map) and Fig. 6 (PS overlap) | ~2 min |
 
-*on ~10 cores; scripts use `parallel::mclapply`. Figure numbers refer to the
+*on ~10 cores. Figure numbers refer to the
 current draft; Sections 5.2-5.5 of the paper hold the full description of
 each validation design (the simulator, grids, replicate counts, and what
 each figure panel shows). Scripts `05b` also plot the weight-adaptivity and
 calibration results; the paper reports those two experiments as tables only.
+
+## Parallel computing and reproducibility
+
+The simulation scripts (01-06) run their replicates in parallel through
+`par_lapply()` in `R/00_parallel.R`, which uses a socket cluster and therefore
+works on Windows, macOS and Linux alike. By default it uses all cores but one;
+set the environment variable `CORES` to change this (`CORES=1` runs
+sequentially).
+
+Every replicate sets its own seed, so the results do not depend on the number
+of cores or on the operating system's parallel back end. Small floating-point
+differences between platforms (for example from different linear-algebra
+libraries) remain possible in the optimiser-based steps.
 
 ## Notes
 

@@ -11,8 +11,11 @@
 ## shrinks as matched distances shrink (caliper sweep => consistency corollary).
 ## =====================================================================
 suppressMessages(library(spaci))
-OUT <- "results"
-dir.create(OUT, showWarnings = FALSE)
+source("R/00_parallel.R")
+## spaci internals used below (not exported by the package)
+matern_cov_matrix <- spaci:::matern_cov_matrix
+OUT <- file.path("results", "02_bias_bound")
+dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 ## stable exponential (nu=0.5) Matern MLE on residuals (from T5 probe; see T8)
 fit_matern_exp <- function(resid, coords) {
@@ -91,7 +94,7 @@ one_rep <- function(n, seed, theta_spatial, gamma, caliper, tau = 0.1,
 ## ---------------- MODE ----------------
 args <- commandArgs(trailingOnly = TRUE)
 MODE <- if (length(args) >= 1) args[1] else "grid"
-library(parallel); RNGkind("L'Ecuyer-CMRG")
+RNGkind("L'Ecuyer-CMRG")
 
 if (MODE == "test") {
   cat("=== single-rep sanity (theta_spatial=2, gamma=1.5, caliper=0.25) ===\n")
@@ -110,9 +113,9 @@ if (MODE == "grid") {
   R <- 200; n <- 250
   res <- lapply(seq_len(nrow(cells)), function(k) {
     th <- cells$theta_spatial[k]; gm <- cells$gamma[k]
-    M <- do.call(rbind, mclapply(1:R, function(r)
+    M <- do.call(rbind, par_lapply(1:R, function(r)
       tryCatch(one_rep(n, seed = 7000*k + r, theta_spatial = th, gamma = gm, caliper = 0.25),
-               error = function(e) NULL), mc.cores = 11))
+               error = function(e) NULL)))
     list(theta_spatial = th, gamma = gm, M = M)
   })
   saveRDS(res, file.path(OUT, "grid.rds")); cat("GRID_DONE\n")
@@ -121,9 +124,9 @@ if (MODE == "grid") {
 if (MODE == "caliper") {
   cals <- c(0.05, 0.1, 0.15, 0.25, 0.5, Inf); R <- 200; n <- 250
   res <- lapply(seq_along(cals), function(k) {
-    M <- do.call(rbind, mclapply(1:R, function(r)
+    M <- do.call(rbind, par_lapply(1:R, function(r)
       tryCatch(one_rep(n, seed = 9000*k + r, theta_spatial = 2.0, gamma = 1.5, caliper = cals[k]),
-               error = function(e) NULL), mc.cores = 11))
+               error = function(e) NULL)))
     list(caliper = cals[k], M = M)
   })
   saveRDS(res, file.path(OUT, "caliper.rds")); cat("CALIPER_DONE\n")

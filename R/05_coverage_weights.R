@@ -8,9 +8,10 @@
 ##      the true confounding/interference mix (pi3 up in gamma, pi2 up in u).
 ## =====================================================================
 suppressMessages(library(spaci))
+source("R/00_parallel.R")
 OUT <- "results"
 dir.create(OUT, showWarnings = FALSE)
-library(parallel); RNGkind("L'Ecuyer-CMRG")
+RNGkind("L'Ecuyer-CMRG")
 
 cover_rep <- function(n, seed, delta_u, theta_spatial = 1.5, gamma = 1.5, tau = 0.1) {
   sim <- simulate_spatial_causal(n = n, delta_u = delta_u, theta_spatial = theta_spatial,
@@ -45,9 +46,9 @@ if (MODE == "coverage") {
   R <- 400
   res <- lapply(seq_along(cells), function(k) {
     cc <- cells[[k]]
-    M <- do.call(rbind, mclapply(1:R, function(r)
+    M <- do.call(rbind, par_lapply(1:R, function(r)
       tryCatch(cover_rep(cc$n, seed = 40000 * k + r, delta_u = cc$du),
-               error = function(e) NULL), mc.cores = 11))
+               error = function(e) NULL)))
     list(delta_u = cc$du, n = cc$n, M = M)
   })
   saveRDS(res, file.path(OUT, "coverage.rds")); cat("COVERAGE_DONE\n")
@@ -59,9 +60,9 @@ if (MODE == "coverage2") {
   R <- 300
   res <- lapply(seq_along(cells), function(k) {
     cc <- cells[[k]]
-    M <- do.call(rbind, mclapply(1:R, function(r)
+    M <- do.call(rbind, par_lapply(1:R, function(r)
       tryCatch(cover_rep(cc$n, seed = 50000 * k + r, delta_u = cc$du),
-               error = function(e) NULL), mc.cores = 11))
+               error = function(e) NULL)))
     list(delta_u = cc$du, n = cc$n, M = M)
   })
   saveRDS(res, file.path(OUT, "coverage2.rds")); cat("COVERAGE2_DONE\n")
@@ -72,9 +73,9 @@ if (MODE == "weights") {
   R <- 160; n <- 250
   res <- lapply(seq_len(nrow(cells)), function(k) {
     u <- cells$u[k]; g <- cells$gamma[k]
-    M <- do.call(rbind, mclapply(1:R, function(r)
+    M <- do.call(rbind, par_lapply(1:R, function(r)
       tryCatch(weight_rep(n, seed = 60000 * k + r, u = u, gamma = g),
-               error = function(e) NULL), mc.cores = 11))
+               error = function(e) NULL)))
     list(u = u, gamma = g, M = M)
   })
   saveRDS(res, file.path(OUT, "weights.rds")); cat("WEIGHTS_DONE\n")

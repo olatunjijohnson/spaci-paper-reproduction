@@ -16,8 +16,13 @@
 ## =====================================================================
 
 suppressMessages(library(spaci))
-OUT <- "results"
-dir.create(OUT, showWarnings = FALSE)
+source("R/00_parallel.R")
+## spaci internals used below (not exported by the package)
+matern_cov_matrix <- spaci:::matern_cov_matrix
+safe_scale <- spaci:::safe_scale
+clip_ps <- spaci:::clip_ps
+OUT <- file.path("results", "04_gamma_probe")
+dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 ## ---- stable exponential (nu = 0.5 fixed) Matern MLE on residual field ----
 ## The full 4-param MLE degenerates (nu -> boundary) on weak residual fields;
@@ -144,12 +149,11 @@ if (MODE == "validate") {
 
 if (MODE == "calib") {
   ## estimate population phi0 = mean phi_hat over reps at moderate n
-  library(parallel)
   R <- 40; n <- 300
-  M <- do.call(rbind, mclapply(1:R, function(r) {
+  M <- do.call(rbind, par_lapply(1:R, function(r) {
     x <- tryCatch(one_rep(n, seed = 5000 + r), error = function(e) NULL)
     if (is.null(x)) NULL else x[c("phi_sigma2","phi_theta","phi_nu","phi_eps")]
-  }, mc.cores = 10))
+  }))
   phi0 <- list(sigma2 = median(M[,1]), theta = median(M[,2]),
                nu = 0.5, sigma2_eps = median(M[,4]))
   saveRDS(phi0, file.path(OUT, "phi0.rds"))
@@ -157,7 +161,6 @@ if (MODE == "calib") {
 }
 
 if (MODE == "run") {
-  library(parallel)
   RNGkind("L'Ecuyer-CMRG")
   phi0 <- readRDS(file.path(OUT, "phi0.rds"))
   grid <- list(list(n = 100, R = 160), list(n = 150, R = 160),
@@ -167,9 +170,8 @@ if (MODE == "run") {
     f <- file.path(OUT, sprintf("res_n%04d.rds", g$n))
     if (file.exists(f)) { cat("skip n=", g$n, "\n"); next }
     t0 <- Sys.time()
-    M <- do.call(rbind, mclapply(1:g$R, function(r)
-      tryCatch(one_rep(g$n, seed = 1e6 * g$n + r, phi0 = phi0), error = function(e) NULL),
-      mc.cores = 11))
+    M <- do.call(rbind, par_lapply(1:g$R, function(r)
+      tryCatch(one_rep(g$n, seed = 1e6 * g$n + r, phi0 = phi0), error = function(e) NULL)))
     saveRDS(list(n = g$n, M = M), f)
     cat(sprintf("n=%4d done: %d reps, %.1f min\n", g$n, nrow(M),
                 as.numeric(difftime(Sys.time(), t0, units = "mins"))))
@@ -179,12 +181,11 @@ if (MODE == "run") {
 
 ## ---- Regime B: correct specification (delta_u = 0 => U fully recoverable) ----
 if (MODE == "calibB") {
-  library(parallel)
   R <- 40; n <- 300
-  M <- do.call(rbind, mclapply(1:R, function(r) {
+  M <- do.call(rbind, par_lapply(1:R, function(r) {
     x <- tryCatch(one_rep(n, seed = 6000 + r, delta_u = 0), error = function(e) NULL)
     if (is.null(x)) NULL else x[c("phi_sigma2","phi_theta","phi_nu","phi_eps")]
-  }, mc.cores = 10))
+  }))
   phi0 <- list(sigma2 = median(M[,1]), theta = median(M[,2]),
                nu = 0.5, sigma2_eps = median(M[,4]))
   saveRDS(phi0, file.path(OUT, "phi0B.rds"))
@@ -192,7 +193,6 @@ if (MODE == "calibB") {
 }
 
 if (MODE == "runB") {
-  library(parallel)
   RNGkind("L'Ecuyer-CMRG")
   phi0 <- readRDS(file.path(OUT, "phi0B.rds"))
   grid <- list(list(n = 100, R = 160), list(n = 150, R = 160),
@@ -202,9 +202,9 @@ if (MODE == "runB") {
     f <- file.path(OUT, sprintf("resB_n%04d.rds", g$n))
     if (file.exists(f)) { cat("skip n=", g$n, "\n"); next }
     t0 <- Sys.time()
-    M <- do.call(rbind, mclapply(1:g$R, function(r)
+    M <- do.call(rbind, par_lapply(1:g$R, function(r)
       tryCatch(one_rep(g$n, seed = 2e6 * g$n + r, phi0 = phi0, delta_u = 0),
-               error = function(e) NULL), mc.cores = 11))
+               error = function(e) NULL)))
     saveRDS(list(n = g$n, M = M), f)
     cat(sprintf("B n=%4d done: %d reps, %.1f min\n", g$n, nrow(M),
                 as.numeric(difftime(Sys.time(), t0, units = "mins"))))

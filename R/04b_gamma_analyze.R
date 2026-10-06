@@ -1,5 +1,5 @@
 ## Analyze the Gamma-probe rate-test results (both regimes) -> verdict + figure.
-OUT <- "results"
+OUT <- file.path("results", "04_gamma_probe")
 
 summarise <- function(pattern) {
   files <- sort(list.files(OUT, pattern, full.names = TRUE))
